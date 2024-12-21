@@ -88,6 +88,9 @@ jobs:
         with:
           path: downloaded_artifacts
 
+      - name: List downloaded artifacts
+        run: ls -R downloaded_artifacts
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
