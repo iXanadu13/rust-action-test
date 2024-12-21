@@ -6,6 +6,16 @@ on:
       - main
 
 jobs:
+  pre-build:
+    name: pre-build
+    runs-on: ubuntu-20.04
+    steps:
+      - name: setup GITHUB_ENV
+        id: extract_info
+        run: |
+          echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].name)" >> $GITHUB_ENV
+
   build:
     name: build
     runs-on: ${{ matrix.os }}
@@ -17,17 +27,17 @@ jobs:
             os: ubuntu-20.04
             rust: 1.76.0
             target: x86_64-unknown-linux-gnu
-            archive-name: xcpp-linux.tar.gz
+            archive-name: ${{ env.PACKAGE_NAME }}-linux.tar.gz
           - build: macos
             os: macos-latest
             rust: 1.76.0
             target: x86_64-apple-darwin
-            archive-name: xcpp-macos.tar.gz
+            archive-name: ${{ env.PACKAGE_NAME }}-macos.tar.gz
           - build: windows
             os: windows-2019
             rust: 1.76.0
             target: x86_64-pc-windows-gnu
-            archive-name: xcpp-windows.7z
+            archive-name: ${{ env.PACKAGE_NAME }}-windows.7z
       fail-fast: false
 
     steps:
@@ -49,7 +59,7 @@ jobs:
 
       - name: Strip binary (linux and macos)
         if: matrix.build == 'linux' || matrix.build == 'macos'
-        run: strip "target/${{ matrix.target }}/release/xcpp"
+        run: strip "target/${{ matrix.target }}/release/${{ env.PACKAGE_NAME }}"
 
       - name: Build archive
         shell: bash
@@ -58,11 +68,11 @@ jobs:
           cp LICENSE README.md archive/
           cd archive
           if [ "${{ matrix.build }}" = "windows" ]; then
-            cp "../target/${{ matrix.target }}/release/xcpp.exe" ./
-            7z a "${{ matrix.archive-name }}" LICENSE README.md xcpp.exe
+            cp "../target/${{ matrix.target }}/release/${{ env.PACKAGE_NAME }}.exe" ./
+            7z a "${{ matrix.archive-name }}" LICENSE README.md ${{ env.PACKAGE_NAME }}.exe
           else
-            cp "../target/${{ matrix.target }}/release/xcpp" ./
-            tar -czf "${{ matrix.archive-name }}" LICENSE README.md xcpp
+            cp "../target/${{ matrix.target }}/release/${{ env.PACKAGE_NAME }}" ./
+            tar -czf "${{ matrix.archive-name }}" LICENSE README.md ${{ env.PACKAGE_NAME }}
           fi
 
       - name: Upload archive as workflow artifact
@@ -109,30 +119,30 @@ jobs:
       #     asset_content_type: application/octet-stream
       #   env:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload xcpp-linux.tar.gz to Release
+      - name: Upload ${{ env.PACKAGE_NAME }}-linux.tar.gz to Release
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: downloaded_artifacts/xcpp-linux.tar.gz/xcpp-linux.tar.gz
-          asset_name: xcpp-linux.tar.gz
+          asset_path: downloaded_artifacts/${{ env.PACKAGE_NAME }}-linux.tar.gz/${{ env.PACKAGE_NAME }}-linux.tar.gz
+          asset_name: ${{ env.PACKAGE_NAME }}-linux.tar.gz
           asset_content_type: application/gzip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload xcpp-macos.tar.gz to Release
+      - name: Upload ${{ env.PACKAGE_NAME }}-macos.tar.gz to Release
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: downloaded_artifacts/xcpp-macos.tar.gz/xcpp-macos.tar.gz
-          asset_name: xcpp-macos.tar.gz
+          asset_path: downloaded_artifacts/${{ env.PACKAGE_NAME }}-macos.tar.gz/${{ env.PACKAGE_NAME }}-macos.tar.gz
+          asset_name: ${{ env.PACKAGE_NAME }}-macos.tar.gz
           asset_content_type: application/gzip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload xcpp-windows.7z to Release
+      - name: Upload ${{ env.PACKAGE_NAME }}-windows.7z to Release
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: downloaded_artifacts/xcpp-windows.7z/xcpp-windows.7z
-          asset_name: xcpp-windows.7z
+          asset_path: downloaded_artifacts/${{ env.PACKAGE_NAME }}-windows.7z/${{ env.PACKAGE_NAME }}-windows.7z
+          asset_name: ${{ env.PACKAGE_NAME }}-windows.7z
           asset_content_type: application/x-7z-compressed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
