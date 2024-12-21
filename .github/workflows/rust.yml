@@ -47,10 +47,6 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
-      - name: Extract version from Cargo.toml
-        id: extract_version
-        run: echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
-
       - name: Strip binary (linux and macos)
         if: matrix.build == 'linux' || matrix.build == 'macos'
         run: strip "target/${{ matrix.target }}/release/xcpp"
@@ -68,11 +64,29 @@ jobs:
             cp "../target/${{ matrix.target }}/release/xcpp" ./
             tar -czf "${{ matrix.archive-name }}" LICENSE README.md xcpp
           fi
-      - name: Upload archive
-        uses: actions/upload-artifact@v1
+
+      - name: Upload archive as workflow artifact
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.archive-name }}
           path: archive/${{ matrix.archive-name }}
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Extract version from Cargo.toml
+        id: extract_version
+        run: echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: '*'
 
       - name: Create Release
         id: create_release
@@ -84,19 +98,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release Assets
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: archive/${{ matrix.archive-name }}
+          asset_path: ./
           asset_name: ${{ matrix.archive-name }}
-          asset_content_type: |
-            ${{ 
-              if endsWith(matrix.archive-name, '.tar.gz') || endsWith(matrix.archive-name, '.tgz') 
-              then 'application/gzip' 
-              elif endsWith(matrix.archive-name, '.7z') 
-              then 'application/x-7z-compressed' 
-              else 'application/octet-stream' 
-            }}
+          asset_content_type: application/octet-stream
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
