@@ -6,19 +6,8 @@ on:
       - main
 
 jobs:
-  pre-build:
-    name: pre-build
-    runs-on: ubuntu-20.04
-    steps:
-      - name: setup GITHUB_ENV
-        id: extract_info
-        run: |
-          echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
-          echo "PACKAGE_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].name)" >> $GITHUB_ENV
-
   build:
     name: build
-    needs: pre-build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -28,17 +17,17 @@ jobs:
             os: ubuntu-20.04
             rust: 1.76.0
             target: x86_64-unknown-linux-gnu
-            archive-name: ${{ env.PACKAGE_NAME }}-linux.tar.gz
+            archive-name: linux.tar.gz
           - build: macos
             os: macos-latest
             rust: 1.76.0
             target: x86_64-apple-darwin
-            archive-name: ${{ env.PACKAGE_NAME }}-macos.tar.gz
+            archive-name: macos.tar.gz
           - build: windows
             os: windows-2019
             rust: 1.76.0
             target: x86_64-pc-windows-gnu
-            archive-name: ${{ env.PACKAGE_NAME }}-windows.7z
+            archive-name: windows.7z
       fail-fast: false
 
     steps:
@@ -60,7 +49,7 @@ jobs:
 
       - name: Strip binary (linux and macos)
         if: matrix.build == 'linux' || matrix.build == 'macos'
-        run: strip "target/${{ matrix.target }}/release/${{ env.PACKAGE_NAME }}"
+        run: strip "target/${{ matrix.target }}/release/xcpp"
 
       - name: Build archive
         shell: bash
@@ -69,11 +58,11 @@ jobs:
           cp LICENSE README.md archive/
           cd archive
           if [ "${{ matrix.build }}" = "windows" ]; then
-            cp "../target/${{ matrix.target }}/release/${{ env.PACKAGE_NAME }}.exe" ./
-            7z a "${{ matrix.archive-name }}" LICENSE README.md ${{ env.PACKAGE_NAME }}.exe
+            cp "../target/${{ matrix.target }}/release/xcpp.exe" ./
+            7z a "${{ matrix.archive-name }}" LICENSE README.md xcpp.exe
           else
-            cp "../target/${{ matrix.target }}/release/${{ env.PACKAGE_NAME }}" ./
-            tar -czf "${{ matrix.archive-name }}" LICENSE README.md ${{ env.PACKAGE_NAME }}
+            cp "../target/${{ matrix.target }}/release/xcpp" ./
+            tar -czf "${{ matrix.archive-name }}" LICENSE README.md xcpp
           fi
 
       - name: Upload archive as workflow artifact
@@ -89,6 +78,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Extract info from Cargo.toml
+        id: extract_info
+        run: |
+          echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].name)" >> $GITHUB_ENV
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v3
@@ -120,7 +115,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: downloaded_artifacts/${{ env.PACKAGE_NAME }}-linux.tar.gz/${{ env.PACKAGE_NAME }}-linux.tar.gz
+          asset_path: downloaded_artifacts/linux.tar.gz/linux.tar.gz
           asset_name: ${{ env.PACKAGE_NAME }}-linux.tar.gz
           asset_content_type: application/gzip
         env:
@@ -129,7 +124,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: downloaded_artifacts/${{ env.PACKAGE_NAME }}-macos.tar.gz/${{ env.PACKAGE_NAME }}-macos.tar.gz
+          asset_path: downloaded_artifacts/macos.tar.gz/macos.tar.gz
           asset_name: ${{ env.PACKAGE_NAME }}-macos.tar.gz
           asset_content_type: application/gzip
         env:
@@ -138,7 +133,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: downloaded_artifacts/${{ env.PACKAGE_NAME }}-windows.7z/${{ env.PACKAGE_NAME }}-windows.7z
+          asset_path: downloaded_artifacts/windows.7z/windows.7z
           asset_name: ${{ env.PACKAGE_NAME }}-windows.7z
           asset_content_type: application/x-7z-compressed
         env:
