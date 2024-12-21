@@ -18,6 +18,7 @@ jobs:
 
   build:
     name: build
+    needs: pre-build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
