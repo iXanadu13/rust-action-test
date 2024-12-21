@@ -49,6 +49,7 @@ jobs:
 
       - name: Extract info from Cargo.toml
         id: extract_info
+        shell: bash
         run: |
           echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
           echo "PACKAGE_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].name)" >> $GITHUB_ENV
