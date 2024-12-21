@@ -69,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.archive-name }}
-          path: archive/${{ matrix.archive-name }}
+          path: archive
 
   release:
     name: Release
