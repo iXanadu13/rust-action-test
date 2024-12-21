@@ -1,0 +1,48 @@
+name: Rust Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [1.76.0-x86_64-pc-windows-gnu]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Build Project
+        run: cargo build --release
+
+      - name: Extract version from Cargo.toml
+        id: extract_version
+        run: echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "v${{ env.VERSION }}"
+          name: "Release ${{ env.VERSION }}"
+          files: target/release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Assets
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-artifacts-${{ matrix.os }}
+          path: target/release/*
