@@ -12,8 +12,8 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        rust: [1.76.0-x86_64-pc-windows-gnu]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [1.76.0]
 
     steps:
       - name: Checkout code
@@ -31,18 +31,23 @@ jobs:
         id: extract_version
         run: echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
 
+      - name: Rename Build Artifacts
+        run: |
+          mkdir -p renamed_artifacts
+          cp target/release/* renamed_artifacts/${{ matrix.os }}-${{ matrix.rust }}-v${{ env.VERSION }}
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "v${{ env.VERSION }}"
           name: "Release ${{ env.VERSION }}"
-          files: target/release/*
+          files: renamed_artifacts/*
         env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release Assets
         uses: actions/upload-artifact@v3
         with:
-          name: release-artifacts-${{ matrix.os }}
-          path: target/release/*
+          name: release-artifacts-${{ matrix.os }}-${{ matrix.rust }}
+          path: renamed_artifacts/*
