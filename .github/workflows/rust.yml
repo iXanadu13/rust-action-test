@@ -89,10 +89,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Extract version from Cargo.toml
-        id: extract_version
-        run: echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
-
       - name: Download all build artifacts
         uses: actions/download-artifact@v3
         with:
