@@ -31,23 +31,22 @@ jobs:
         id: extract_version
         run: echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
 
-      - name: Rename Build Artifacts
-        run: |
-          mkdir -p renamed_artifacts
-          cp target/release/* renamed_artifacts/${{ matrix.os }}-${{ matrix.rust }}-v${{ env.VERSION }}
-
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "v${{ env.VERSION }}"
           name: "Release ${{ env.VERSION }}"
-          files: renamed_artifacts/*
+          files: |
+            target/release/*
+            !target/release/*.d  # 排除 .d 文件
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release Assets
         uses: actions/upload-artifact@v3
         with:
-          name: release-artifacts-${{ matrix.os }}-${{ matrix.rust }}
-          path: renamed_artifacts/*
+          name: release-artifacts-${{ matrix.os }}
+          path: |
+            target/release/*
+            !target/release/*.d  # 排除 .d 文件
