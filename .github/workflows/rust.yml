@@ -47,9 +47,15 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
+      - name: Extract info from Cargo.toml
+        id: extract_info
+        run: |
+          echo "VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].version)" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r .packages[0].name)" >> $GITHUB_ENV
+
       - name: Strip binary (linux and macos)
         if: matrix.build == 'linux' || matrix.build == 'macos'
-        run: strip "target/${{ matrix.target }}/release/xcpp"
+        run: strip "target/${{ matrix.target }}/release/${{ env.PACKAGE_NAME }}"
 
       - name: Build archive
         shell: bash
@@ -58,11 +64,11 @@ jobs:
           cp LICENSE README.md archive/
           cd archive
           if [ "${{ matrix.build }}" = "windows" ]; then
-            cp "../target/${{ matrix.target }}/release/xcpp.exe" ./
-            7z a "${{ matrix.archive-name }}" LICENSE README.md xcpp.exe
+            cp "../target/${{ matrix.target }}/release/${{ env.PACKAGE_NAME }}.exe" ./
+            7z a "${{ matrix.archive-name }}" LICENSE README.md ${{ env.PACKAGE_NAME }}.exe
           else
-            cp "../target/${{ matrix.target }}/release/xcpp" ./
-            tar -czf "${{ matrix.archive-name }}" LICENSE README.md xcpp
+            cp "../target/${{ matrix.target }}/release/${{ env.PACKAGE_NAME }}" ./
+            tar -czf "${{ matrix.archive-name }}" LICENSE README.md ${{ env.PACKAGE_NAME }}
           fi
 
       - name: Upload archive as workflow artifact
@@ -98,7 +104,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "v${{ env.VERSION }}"
-          name: "Release ${{ env.VERSION }}"
+          name: "${{ env.PACKAGE_NAME }}-${{ env.VERSION }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
