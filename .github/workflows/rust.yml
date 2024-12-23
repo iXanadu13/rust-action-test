@@ -47,6 +47,11 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
+      - name: Run tests
+        run: cargo test --verbose --target ${{ matrix.target }}
+        env:
+          RUST_BACKTRACE: 1
+
       - name: Extract info from Cargo.toml
         id: extract_info
         shell: bash
